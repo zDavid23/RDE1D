@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-import matplotlib as plt
+import matplotlib.pyplot as plt
 # Generate Data
 
 import pickle
@@ -10,13 +10,12 @@ for i in range(1001):
     new_file_num = str(i)
     while len(new_file_num) < 4:
         new_file_num = "0" + new_file_num
-    with open(f"/Users/davidzoro/Downloads/RDE1D-main/_output/fort.q{new_file_num}", "rb") as f:
+    with open(f"/Users/davidzoro/RDE1D/_output/fort.q{new_file_num}", "rb") as f:
         for _ in range(5):
             next(f) 
-        temp_data = np.loadtxt(f)
+        temp_data = np.mean(np.loadtxt(f), axis=0)
     data.append(temp_data)
 data = np.vstack(data)
-
 labels = data[:, 3]
 inputs = data[:,:3]
 
@@ -33,17 +32,17 @@ class UNET (nn.Module):
     def __init__(self, in_channels):
         super(UNET, self).__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=in_channels,out_channels= in_channels // 2, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv1d(in_channels=in_channels // 2,out_channels=  in_channels // 2, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv1d(in_channels=in_channels // 2, out_channels= in_channels // 8, kernel_size=3, stride=1, padding=1)
-        self.conv4 = nn.ConvTranspose1d(in_channels=in_channels // 8,out_channels=  in_channels // 8, kernel_size=3, stride=1, padding=1)
-        self.conv5 = nn.Conv1d(in_channels=in_channels // 8, out_channels= in_channels // 16, kernel_size=3, stride=1, padding=1)
-        self.conv6 = nn.Conv1d(in_channels=in_channels // 16, out_channels= in_channels // 32, kernel_size=3, stride=1, padding=1)
-        self.conv7 = nn.Conv1d(in_channels=in_channels // 32, out_channels= in_channels // 64, kernel_size=3, stride=1, padding=1)
-        self.conv4 = nn.ConvTranspose1d(in_channels=in_channels // 64,out_channels=  in_channels // 64, kernel_size=3, stride=1, padding=1)
-        self.conv8 = nn.Conv1d(in_channels=in_channels // 64,out_channels=  in_channels // 128, kernel_size=3, stride=1, padding=1)
-        self.conv9 = nn.Conv1d(in_channels=in_channels // 128,out_channels=  in_channels // 256, kernel_size=3, stride=1, padding=1)
-        self.conv10 = nn.Conv1d(in_channels=in_channels // 256, out_channels= in_channels // 512, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv1d(in_channels=in_channels,out_channels= in_channels * 2, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv1d(in_channels=in_channels * 2,out_channels=  in_channels * 2, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv1d(in_channels=in_channels * 2, out_channels= in_channels * 8, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.ConvTranspose1d(in_channels=in_channels * 8,out_channels=  in_channels * 8, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv1d(in_channels=in_channels * 8, out_channels= in_channels * 16, kernel_size=3, stride=1, padding=1)
+        self.conv6 = nn.Conv1d(in_channels=in_channels * 16, out_channels= in_channels * 32, kernel_size=3, stride=1, padding=1)
+        self.conv7 = nn.Conv1d(in_channels=in_channels * 32, out_channels= in_channels * 64, kernel_size=3, stride=1, padding=1)
+        self.conv8= nn.ConvTranspose1d(in_channels=in_channels * 64, out_channels= in_channels * 64, kernel_size=3, stride=1, padding=1)
+        self.conv9 = nn.Conv1d(in_channels=in_channels * 64, out_channels= in_channels * 128, kernel_size=3, stride=1, padding=1)
+        self.conv10 = nn.Conv1d(in_channels=in_channels * 128, out_channels= in_channels * 256, kernel_size=3, stride=1, padding=1)
+        self.conv11 = nn.Conv1d(in_channels=in_channels * 256, out_channels= in_channels * 512, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -56,6 +55,7 @@ class UNET (nn.Module):
         x = self.conv8(x)
         x = self.conv9(x)
         x = self.conv10(x)
+        x = self.conv11(x)
         return x
 
 class Transformer(nn.Module):
@@ -66,22 +66,21 @@ class Transformer(nn.Module):
         self.the_UNET = UNET(in_channels)
     def forward(self, x):
         x = self.TransformerEncoder(x)
-        x = x.mean(dim=0)
+        x = x.reshape(x.shape[0], 1, x.shape[1])
         x = self.the_UNET(x)
         x = self.regressor(x)
         return x
 
 
 #Define hyperparameters
-epochs = 50
+epochs = 150
 loss_func = nn.MSELoss()
-Model = Transformer(in_channels=512, d_model=3, num_heads=1, num_encoder_layers=1, num_classes=1)
+Model = Transformer(in_channels=1, d_model=3, num_heads=1, num_encoder_layers=3, num_classes=1)
 learning_rate = 0.001
 optimizer = torch.optim.Adam(Model.parameters(), lr = learning_rate)
 # Identifying tracked values
 
 train_loss = []
-
 
 # training loop
 train_inputs = torch.from_numpy(train_inputs).float()
@@ -94,17 +93,17 @@ for i in range(epochs):
     predictions = Model(train_inputs)
     loss = loss_func(predictions, train_labels)
     print(f"Epoch {i} Loss: {loss}")
-    train_loss.append(loss)
+    train_loss.append(loss.item())
     loss.backward()
     optimizer.step()
-
-
-plt.plot(train_loss)
-plt.xlabel("Epochs")
-plt.ylabel("Mean-Squared Error")
 
 with torch.no_grad():
     val_predictions = Model(validation_inputs)
     loss = loss_func(val_predictions, validation_labels)
 
-print("Validation Loss:", loss)
+print("Validation Loss:", loss.item())
+print("Training complete")
+plt.plot(np.linspace(0, len(train_loss)-1,  len(train_loss)), train_loss)
+plt.xlabel("Epochs")
+plt.ylabel("Mean-Squared Error")
+plt.show()
