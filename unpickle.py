@@ -115,6 +115,7 @@ plt.show()
 print("Validation Predictions Shape:", val_predictions.shape, val_predictions)
 print("Validation Labels Shape:", validation_labels.shape)
 new_predictions = val_predictions.squeeze().numpy()
+
 # Predicted by ground truth
 plt.plot(np.linspace(0, 90 + (len(new_predictions)-1)/10, len(new_predictions)+len(train_labels)), np.concatenate([train_labels, new_predictions]), label="Predicted", color="red")
 plt.plot(np.linspace(0, 90 + (len(new_predictions)-1)/10, len(new_predictions)+len(train_labels)), np.concatenate([train_labels, validation_labels]), label="Ground Truth", color="blue")
@@ -122,8 +123,43 @@ plt.xlabel("Time (s)")
 plt.ylabel("Density of Combustion Progress Variable")
 plt.show()
 plt.figure()
+
 plt.plot(np.linspace(90, 90 + (len(new_predictions)-1)/10, len(new_predictions)), new_predictions, label="Predicted", color="red")
 plt.plot(np.linspace(90, 90 + (len(new_predictions)-1)/10, len(new_predictions)), validation_labels, label="Ground Truth", color="blue")
 plt.xlabel("Time (s)")
 plt.ylabel("Density of Combustion Progress Variable")
+plt.show()
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.animation import FuncAnimation
+
+# Assuming `new_predictions` and `validation_labels` are already defined
+time = np.linspace(90, 90 + (len(new_predictions) - 1) / 10, len(new_predictions))
+
+# Create a figure and axis
+fig, ax = plt.subplots()
+ax.set_xlim(90, 90 + (len(new_predictions) - 1) / 10)
+ax.set_ylim(min(new_predictions.min(), validation_labels.min()), max(new_predictions.max(), validation_labels.max()))
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Density of Combustion Progress Variable")
+
+# Initialize lines for predicted and ground truth
+predicted_line, = ax.plot([], [], label="Predicted", color="red")
+ground_truth_line, = ax.plot([], [], label="Ground Truth", color="blue")
+ax.legend()
+
+# Update function for animation
+def update(frame):
+    predicted_line.set_data(time[:frame], new_predictions[:frame])
+    ground_truth_line.set_data(time[:frame], validation_labels[:frame])
+    return predicted_line, ground_truth_line
+
+# Create animation
+ani = FuncAnimation(fig, update, frames=len(time), interval=100, blit=True)
+
+# Save the animation as a video
+ani.save("combustion_progress.mp4", writer="ffmpeg", fps=10)
+
 plt.show()
