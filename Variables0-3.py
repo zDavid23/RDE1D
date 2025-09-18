@@ -83,7 +83,6 @@ for i in range(data.shape[1]):
             super(Transformer, self).__init__()
             self.TransformerEncoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=d_model, nhead=num_heads), num_encoder_layers)
             self.regressor = nn.Linear(1536, num_classes)
-
             self.the_UNET = UNET(in_channels)
         def forward(self, x):
             x = self.TransformerEncoder(x)
@@ -91,7 +90,6 @@ for i in range(data.shape[1]):
             x = self.the_UNET(x)
             x = self.regressor(x)
             return x
-
 
     #Define hyperparameters
     epochs = 500
@@ -179,3 +177,5 @@ for i in range(data.shape[1]):
     ani.save(f"{name}_1fps.mp4", writer="ffmpeg", fps=1)
 
     plt.show()
+    
+    

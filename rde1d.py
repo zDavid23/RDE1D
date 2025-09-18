@@ -3,10 +3,11 @@ import euler_1D_py
 import numpy as np
 from clawpack import pyclaw
 from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 #!/usr/bin/env python
 # encoding: utf-8
-
 
 def getPrimitive(q,state):
     # Get area and problem data:
@@ -171,3 +172,40 @@ solver.fwave = False
 
 # Run the simulation:
 claw.run()
+
+# Animation code
+def animate_simulation():
+    num_frames = len(claw.frames)
+    fig, axs = plt.subplots(3, 1, figsize=(8, 12))
+    lines = []
+
+    titles = ['Pressure (P)', 'Temperature (T)', 'Combustion Progress Variable (z)']
+    ylabels = ['Pressure', 'Temperature', 'Progress Variable']
+
+    for ax, title, ylabel in zip(axs, titles, ylabels):
+        ax.set_title(title)
+        ax.set_xlabel('x')
+        ax.set_ylabel(ylabel)
+        line, = ax.plot([], [], lw=2)
+        lines.append(line)
+
+    for ax in axs:
+        ax.set_xlim(xc.min(), xc.max())
+        ax.set_ylim(0, 1.5)
+
+    def update(frame_idx):
+        frame = claw.frames[frame_idx]
+        q = frame.q
+        rho, u, P, T, z = getPrimitive(q, state)
+
+        lines[0].set_data(xc, P)
+        lines[1].set_data(xc, T)
+        lines[2].set_data(xc, z)
+        return lines
+
+    ani = FuncAnimation(fig, update, frames=num_frames, blit=True)
+    ani.save('simulation.mp4', writer='ffmpeg', fps=30)
+    plt.show()
+
+# Call the animation function
+animate_simulation()
